@@ -14,7 +14,7 @@ import pickle
 #required variables for all schemes are 
 #physics: name of a microphysics scheme, either M2005,
 #         M2005_HMmod, SAM1MOM, THOM, or P3
-#qc (droplet mass mixing ratio) [g/kg]
+#qc (cloud droplet mass mixing ratio) [g/kg]
 #qi (cloud ice mass mixing ratio) [g/kg]
 #qs (snow mass mixing ratio) [g/kg]
 #qr (rain mass mixing ratio) [g/kg]
@@ -35,11 +35,13 @@ import pickle
 #nr (rain number concentration) [cm-3]
 
 #additional required variables for P3
-#qir (rime ice volume mixing ratio) [cm-3/kg]
-#qib (rime ice mass mixing ratio) [cm-3]
-#if output of p3 scheme is total ice, input
-#total ice for qi and equal-size arrays filled with 
-#zeros for qs and qg
+#qir (rime ice volume mixing ratio) [g/kg]
+#qib (rime ice mass mixing ratio) [cm-3/kg]
+
+#if P3 scheme only outputs the total 
+#frozen mass mixing ratio (qi+qs+qg),
+#then input that for qi and input equal-size arrays 
+#filled with zeros for qs and qg
 
 #OUTPUT
 
@@ -78,6 +80,8 @@ def radar_simulator(physics,qc,qi,qs,qr,qg,p,t,rho,nc,ni=np.nan,nr=np.nan,\
   dlogD=np.diff(np.log10(D))
 
   #Call microphysics codes to get particle size distributions (PSDs)
+  #PSDs are consistent with the microphysics schemes as they are 
+  #specified in SAM 6.6 (System for Atmospheric Modelling)
   if ((physics=='M2005')or(physics=='M2005_HMmod')):
     [Dc,Di,Dr,Ds,Dg,dDc,dDi,dDr,dDs,dDg,\
      Nc,Ni,Nr,Ns,Ng]=\
@@ -102,16 +106,16 @@ def radar_simulator(physics,qc,qi,qs,qr,qg,p,t,rho,nc,ni=np.nan,nr=np.nan,\
   [n_r,n_i]=compute_m_wat(freq,t)
   m_wat=complex(n_r,-n_i)
 
-  #if there is a small amount of hydrometeor mass present,
+  #if there is at least a small amount of hydrometeor mass present,
   #compute the unattentuated reflectivity factor (z_eff*) 
   #for that hydrometeor
 
   #also return reflectivity factor for Rayleight scattering (z_ray*)
   #and attentuation coefficient (kr*)
-  #these variables are not used but are returned so that attenuation
-  #can be added in later
+  #these variables are not currently used but are returned so that 
+  #attenuation can be added later
 
-  #SAM1MOM only assumes size distributions for 
+  #SAM1MOM microphysics only assumes size distributions for 
   #precipitation (rain, snow and graupel) so reflectivity is
   #only estimated for those hydrometeors
 
@@ -186,12 +190,11 @@ def get_psd_sam1mom(D,D_mid,dD,qs,qr,qg,rho):
          np.nan*dD,np.nan*dD,dDeqr,dDeqs,dDeqg,\
          np.nan*D_mid,np.nan*D_mid,distr_array,\
          dists_array,distg_array 
-def get_psd_m2005(D,D_mid,dD,nc,ni,ns,nr,ng,qc,qi,qs,qr,qg,rho):
 
 ####################################################
 #Use Morrison microphysics to compute PSDs###
 ####################################################
-
+def get_psd_m2005(D,D_mid,dD,nc,ni,ns,nr,ng,qc,qi,qs,qr,qg,rho):
 
   rhoi=500 #kg/m3
   rhow=997 #kg/m3
@@ -274,11 +277,10 @@ def get_psd_m2005(D,D_mid,dD,nc,ni,ns,nr,ng,qc,qi,qs,qr,qg,rho):
          distc_array,disti_array,distr_array,\
          dists_array,distg_array 
 
-def get_psd_p3(D,D_mid,dD,nc,ni,nr,qc,qi,qr,qir,qib,rho):
-
 ####################################################
 #Use P3 microphysics to compute PSDs###
 ####################################################
+def get_psd_p3(D,D_mid,dD,nc,ni,nr,qc,qi,qr,qir,qib,rho):
 
   rhow=997 #kg/m3
 
@@ -304,9 +306,9 @@ def get_psd_p3(D,D_mid,dD,nc,ni,nr,qc,qi,qr,qir,qib,rho):
   lambdas=data.variables['lambda_ice'][:]
   Frime=data.variables['Frime'][:]
 
-  Fr=qir/qi
-  crp=qir/qib
-  qnorm=qi*rho*1e-3/(ni*1e6)
+  Fr=qir/qi #[unitless]
+  crp=qir*1e3/qib #[kg m-3]
+  qnorm=qi*rho*1e-3/(ni*1e6) #[kg]
   qnear=np.argmin(abs(qi_steps-qnorm))
   rhonear=np.argmin(abs(rhorime_steps-crp))
   Fnear=np.argmin(abs(Fr-Frime))
@@ -408,7 +410,6 @@ def get_psd_p3(D,D_mid,dD,nc,ni,nr,qc,qi,qr,qir,qib,rho):
 ####################################################
 #Use Thompson microphysics to compute PSDs###
 ####################################################
-
 def get_psd_thom(D,D_mid,dD,nc,ni,nr,qc,qi,qs,qr,qg,rho,T):
 
   nr=nr*1e-6*rho
