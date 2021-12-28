@@ -80,8 +80,6 @@ def radar_simulator(physics,qc,qi,qs,qr,qg,p,t,rho,nc,ni=np.nan,nr=np.nan,\
   dlogD=np.diff(np.log10(D))
 
   #Call microphysics codes to get particle size distributions (PSDs)
-  #PSDs are consistent with the microphysics schemes as they are 
-  #specified in SAM 6.6 (System for Atmospheric Modelling)
   if ((physics=='M2005')or(physics=='M2005_HMmod')):
     [Dc,Di,Dr,Ds,Dg,dDc,dDi,dDr,dDs,dDg,\
      Nc,Ni,Nr,Ns,Ng]=\
